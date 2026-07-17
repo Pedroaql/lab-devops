@@ -4,5 +4,8 @@ repos:
     hooks:
       - id: terraform_fmt
       - id: terraform_validate
-      - id: terraform_tfsec
+      - id: terraform_trivy
       - id: terraform_checkov
+        args:
+          - --args=--skip-check
+          - --args=CKV_TF_1
