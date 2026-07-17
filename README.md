@@ -1,39 +1,55 @@
-# Lab DevOps — Terraform + GitOps + CI/CD no Homelab
+Lab DevOps — Terraform + GitOps + CI/CD no Homelab
 
-Laboratório prático de DevOps rodando 100% em ambiente próprio (Pop!_OS + Windows/WSL2),
-sem depender de nuvem paga. Cobre o ciclo completo de infraestrutura como código: módulo
-Terraform versionado no Git, state remoto, validação automática pré-commit, pipeline de
-CI/CD com aprovação manual, e um loop de reconciliação estilo GitOps.
+Laboratório prático de DevOps rodando 100% em ambiente próprio (Pop!_OS), sem depender
+de nuvem paga. Cobre o ciclo completo de infraestrutura como código: módulo Terraform
+versionado no Git, state remoto, validação automática pré-commit, pipeline de CI/CD com
+runner self-hosted, e testado de ponta a ponta com um Pull Request real.
 
-## Arquitetura
+Status: ciclo completo validado ✅
 
-```
-┌─────────────────────────┐         ┌──────────────────────────┐
-│   Windows (WSL2)         │         │   Pop!_OS                 │
-│   estação de controle    │ ------> │   nó de infraestrutura    │
-│                           │  rede   │                            │
-│  - Terraform              │  local  │  - Docker (API remota)    │
-│  - Git                    │         │  - MinIO (state S3)       │
-│  - pre-commit             │         │  - GitHub Actions runner  │
-└─────────────────────────┘         └──────────────────────────┘
-```
+Este projeto não é só teoria — o fluxo abaixo foi executado e testado na prática:
 
-## O que este repositório demonstra
 
-- **IaC modular**: infraestrutura definida em módulo Terraform próprio, versionado e
-  consumido via tag Git (`git::...?ref=v1.0.0`)
-- **State remoto**: sem `.tfstate` local, backend S3-compatible via MinIO
-- **Shift-left de segurança**: `tfsec` e `checkov` rodando antes de qualquer commit chegar
-  ao repositório, via pre-commit hooks
-- **CI/CD com controle**: plan automático em pull request, apply em produção só após
-  aprovação manual
-- **GitOps fora do Kubernetes**: reconciliação automática entre o estado declarado no Git
-  e o ambiente real, via `systemd timer`
-- **Docker vs Podman**: comparação prática de isolamento e modelo rootless
+Módulo Terraform criado e versionado com tag v1.0.0
+Projeto principal consumindo o módulo via git::...?ref=v1.0.0
+State remoto migrado para backend S3-compatible (MinIO)
+Pre-commit hooks validando fmt, validate, trivy e checkov antes de cada commit
+Runner self-hosted registrado e pipeline de CI/CD configurado no GitHub Actions
+Pull Request de teste aberto → job plan executado automaticamente → merge → job
+apply executado automaticamente → infraestrutura alterada de verdade
 
-## Estrutura do repositório
 
-```
+Arquitetura
+
+┌───────────────────────────────────────────────┐
+│                    Pop!_OS                      │
+│                                                  │
+│  - Docker (com API remota habilitada)           │
+│  - MinIO (backend S3 para state do Terraform)   │
+│  - GitHub Actions runner self-hosted            │
+│  - Terraform, Git, pre-commit                   │
+└───────────────────────────────────────────────┘
+
+O que este repositório demonstra
+
+
+IaC modular: infraestrutura definida em módulo Terraform próprio, versionado e
+consumido via tag Git
+State remoto: sem .tfstate local, backend S3-compatible via MinIO
+Shift-left de segurança: trivy e checkov rodando antes de qualquer commit
+chegar ao repositório, via pre-commit hooks
+Exceção de segurança documentada: o módulo usa tag semântica (v1.0.0) em vez de
+hash de commit fixo (CKV_TF_1), uma troca consciente entre legibilidade/manutenção e
+segurança máxima — aceitável para este contexto, documentada explicitamente na
+configuração do checkov em vez de ignorada silenciosamente
+CI/CD real, testado com PR: plan automático em pull request, apply automático
+após merge na main, rodando num runner self-hosted no próprio homelab
+GitOps fora do Kubernetes: reconciliação possível via script + systemd timer
+Docker vs Podman: comparação prática de isolamento e modelo rootless
+
+
+Estrutura do repositório
+
 .
 ├── terraform-projeto/          # projeto principal que consome o módulo
 │   ├── main.tf
@@ -48,35 +64,50 @@ CI/CD com aprovação manual, e um loop de reconciliação estilo GitOps.
 │   └── reconcile.sh            # script de reconciliação GitOps
 ├── .github/
 │   └── workflows/
-│       └── terraform.yml       # pipeline de CI/CD
+│       └── terraform.yml       # pipeline de CI/CD (plan em PR, apply em merge)
 ├── docs/
-│   └── setup.md                # passo a passo de instalação e configuração
+│   ├── setup.md                # passo a passo de instalação e configuração
+│   └── publicar-no-github.md   # tutorial de publicação do zero
 ├── .pre-commit-config.yaml
 ├── .gitignore
 └── README.md
-```
 
-## Pré-requisitos
+Pré-requisitos
 
-- Pop!_OS (ou qualquer Linux) com Docker instalado
-- Windows com WSL2 (Ubuntu) com Terraform, Git e pre-commit instalados
-- Conta no GitHub
 
-Passo a passo completo de instalação em [`docs/setup.md`](docs/setup.md).
+Linux (testado em Pop!_OS) com Docker instalado
+Terraform, Git e pre-commit
+Conta no GitHub
 
-## Como usar
 
-```bash
-cd terraform-projeto
+Passo a passo completo de instalação em docs/setup.md.
+
+Como usar
+
+bashcd terraform-projeto
 terraform init
 terraform plan
 terraform apply
-```
 
-## Stack
+Lições da implementação
 
-Terraform · Docker · MinIO · GitHub Actions · pre-commit · tfsec · checkov · Podman
+Vale registrar: nenhuma etapa saiu perfeita na primeira tentativa, e isso faz parte do
+processo real de DevOps. Entre os ajustes feitos durante a implementação:
 
-## Autor
 
-Pedro — [github.com/Pedroaql](https://github.com/Pedroaql)
+Migração de tfsec (descontinuado) para trivy no pre-commit
+Ajuste de sintaxe do backend S3 (endpoint → endpoints, force_path_style →
+use_path_style) para compatibilidade com a versão atual do provider
+Containers configurados com --restart unless-stopped após perceber que reinícios do
+host derrubavam os serviços
+Correção da ordem de eventos do pipeline: o workflow precisa existir na branch main
+antes de um PR conseguir disparar os checks
+
+
+Stack
+
+Terraform · Docker · MinIO · GitHub Actions · pre-commit · Trivy · Checkov
+
+Autor
+
+Pedro — github.com/Pedroaql
