@@ -22,12 +22,12 @@ apply executado automaticamente → infraestrutura alterada de verdade
 Arquitetura
 
 ┌───────────────────────────────────────────────┐
-│                    Pop!_OS                      │
-│                                                  │
-│  - Docker (com API remota habilitada)           │
-│  - MinIO (backend S3 para state do Terraform)   │
-│  - GitHub Actions runner self-hosted            │
-│  - Terraform, Git, pre-commit                   │
+│                    Pop!_OS                    │
+│                                               │
+│  - Docker (com API remota habilitada)         │
+│  - MinIO (backend S3 para state do Terraform) │
+│  - GitHub Actions runner self-hosted          │
+│  - Terraform, Git, pre-commit                 │
 └───────────────────────────────────────────────┘
 
 O que este repositório demonstra
@@ -50,7 +50,7 @@ Docker vs Podman: comparação prática de isolamento e modelo rootless
 
 Estrutura do repositório
 
-.
+
 ├── terraform-projeto/          # projeto principal que consome o módulo
 │   ├── main.tf
 │   ├── backend.tf
