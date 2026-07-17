@@ -14,7 +14,7 @@ provider "docker" {
 module "site" {
   source         = "git::https://github.com/Pedroaql/lab-devops.git//terraform-modules/docker-nginx?ref=v1.0.0"
   container_name = "lab-nginx"
-  external_port  = 8080
+  external_port  = 8082
 }
 
 output "url" {
